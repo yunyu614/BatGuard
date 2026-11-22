@@ -27,7 +27,13 @@ st()   { rd $BAT/status; }
 tmp()  { t=$(rd $BAT/temp); [ -z "$t" ] && t=$(rd $BAT/battery_temp)
          [ -z "$t" ] && { echo 0; return; }
          awk -v t="$t" 'BEGIN{ printf (t>200? "%.1f" : "%.1f"), (t>200? t/10 : t) }'; }
-chg_tmp() { t=$(rd $TM/charger_temp); [ -z "$t" ] && t=$(rd $BAT/charger_temp)
+chg_tmp() {
+         t=""
+         for z in /sys/class/thermal/thermal_zone*; do
+           [ "$(rd $z/type)" = "charger_therm" ] && { t=$(rd $z/temp); break; }
+         done
+         [ -z "$t" ] && t=$(rd $TM/charger_temp)
+         [ -z "$t" ] && t=$(rd $BAT/charger_temp)
          [ -z "$t" ] && { echo 0; return; }
          awk -v t="$t" 'BEGIN{ printf (t>1000? "%.1f" : "%.1f"), (t>1000? t/1000 : t) }'; }
 # 功率：取输入侧 V×I
@@ -76,17 +82,23 @@ write_ok() {  # $1=节点 $2=值 → 真写入成功与否（回读比对，容�
 
 # 学习：检测哪个方法真能让 status 变化
 detect_methods() {
-  log "开始探测停充方法…"
-  res=""
   st0=$(st)
+  case "$st0" in
+    Charging) ;;
+    *)  log "当前 $st0，非充电状态无法判定停充，跳过探测"
+        echo "{\"time\":\"$(date '+%F %T')\",\"skipped\":\"$st0\",\"items\":[]}" > "$DETECT"
+        return 0 ;;
+  esac
+  log "开始探测停充方法（当前 $st0）…"
   methods | while IFS='|' read -r name node off on; do
     [ -w "$node" ] || continue
     if write_ok "$node" "$off"; then
-      sleep 4
+      sleep 5
       s1=$(st)
       write_ok "$node" "$on"
+      sleep 2
       case "$s1" in
-        *Discharg*|*"Not charging"*|*Full*) r=ok ;;
+        *Discharg*|*"Not charging"*) r=ok ;;
         *) r=node_only ;;
       esac
     else
@@ -100,18 +112,11 @@ detect_methods() {
   echo "$okn"
 }
 
-pick_method() {  # 优先用学习到 ok 的方法，否则按表第一个可写
-  if [ -f "$DETECT" ]; then
-    line=$(grep -o '{"name":"[^"]*"[^}]*"result":"ok"' "$DETECT" | head -1)
-    if [ -n "$line" ]; then
-      nm=$(echo "$line" | sed 's/.*"name":"\([^"]*\)".*/\1/')
-      methods | grep "^$nm|" | head -1
-      return
-    fi
-  fi
-  methods | while IFS='|' read -r n node off on; do
-    if [ -w "$node" ]; then echo "$n|$node|$off|$on"; break; fi
-  done
+pick_method() {  # 只用探测确认可用(ok)的方法；没有就返回空
+  [ -f "$DETECT" ] || return 0
+  nm=$(grep -o '"name":"[^"]*","node":"[^"]*","result":"ok"' "$DETECT" 2>/dev/null | head -1 | sed 's/.*"name":"\([^"]*\)".*/\1/')
+  [ -z "$nm" ] && return 0
+  methods | grep "^$nm|" | head -1
 }
 
 # ---------- 控制 ----------
@@ -122,6 +127,7 @@ COFF=$(echo "$CTRL" | cut -d'|' -f3)
 CON=$(echo "$CTRL" | cut -d'|' -f4)
 LIMIT=$(cfg limit 80); RESUME=$(cfg resume 75)
 SOC_STATE=0   # 0=正常 1=已停充
+[ -z "$CNAME" ] && { CNAME=none; log "未找到可用的停充方法（可能当前不在充电，或内核不支持软件停充）"; }
 log "控制方法=$CNAME 节点=$CNODE 阈值=${LIMIT}/${RESUME}"
 
 apply_thermal() {
