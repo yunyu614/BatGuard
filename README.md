@@ -103,6 +103,35 @@ thermal_level=-1     # 温控档位 -1~10
 
 管理器里卸载即可。`uninstall.sh` 会停掉守护并把充电恢复为开启状态，避免停在「已停止充电」。
 
+---
+
+## 实测记录
+
+环境：Android 17 / HyperOS 4 / arm64（小米，2026-11）
+
+| 能力 | 结果 | 证据 |
+|---|---|---|
+| 实时功率/电流/电压 | ✅ 可用 | 输入侧 5.00V × 0.58A ≈ 2.1W，随充电状态变化 |
+| 健康度 / 容量 / 循环 | ✅ 可用 | 9002 / 9070 mAh = 99%，37 循环 |
+| 电池温度 / 充电器温度 | ✅ 可用 | 电池 37.6°C、充电器 39.9°C（`charger_therm` 热区） |
+| 模块描述动态显示 | ✅ 可用 | `⚡0.8W · 100% · 健康99% · 37循环 · 37.1°C · 上限80%` |
+| **温控档位调整** | ✅ **可用** | 写入 `sconfig=2` 读回 2，还原 `-1` 读回 -1，双向实测通过 |
+| 阈值停充 | ⏳ 待验证 | 测试时电池 100% 已由内核自然停充，无法判定；模块会在下次进入充电态时自动探测 |
+
+该机型**内核拒写**（连 SELinux permissive 下也返回 Permission denied）的节点：
+
+```
+/sys/devices/platform/soc/soc:mca_charge_interface/input_suspend
+/sys/devices/platform/soc/soc:mca_charge_interface/charge_enable
+/sys/class/power_supply/battery/charge_control_limit
+/sys/class/power_supply/usb/current_max
+/sys/class/power_supply/battery/input_current_limit
+/sys/class/power_supply/battery/constant_charge_current
+/sys/class/power_supply/battery/voltage_max
+```
+
+因此**充电功率限制（把 33W 限到 10W）该机型不可用**，模块不提供假开关，只在 WebUI 里如实展示探测结果。
+
 ## 已知限制
 
 - **停充依赖厂商节点**：能不能停充取决于你的内核有没有开放写接口，模块只做探测与如实汇报
