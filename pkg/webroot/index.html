@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BatGuard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>BatGuard</h1>
+  <div class="sub" id="sub">充电控制 · 功率 · 健康</div>
+</header>
+
+<nav>
+  <button class="tab active" data-t="overview">总览</button>
+  <button class="tab" data-t="history">历史</button>
+  <button class="tab" data-t="settings">设置</button>
+</nav>
+
+<main>
+<section id="overview" class="page active">
+  <div class="batt">
+    <div class="ring">
+      <svg viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="52" class="track"/>
+        <circle cx="60" cy="60" r="52" class="fill" id="ringFill"/>
+      </svg>
+      <div class="ringtxt"><b id="cap">--</b><span>%</span></div>
+    </div>
+    <div class="wbig"><b id="w">--</b><span>W</span><i id="status">--</i></div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><i>电流</i><b id="a">--</b><span>A</span></div>
+    <div class="card"><i>电压</i><b id="v">--</b><span>V</span></div>
+    <div class="card"><i>峰值功率</i><b id="peak">--</b><span>W</span></div>
+    <div class="card"><i>温度</i><b id="temp">--</b><span>°C</span></div>
+    <div class="card"><i>充电器</i><b id="ctemp">--</b><span>°C</span></div>
+    <div class="card"><i>健康度</i><b id="health">--</b><span>%</span></div>
+    <div class="card"><i>容量</i><b id="capmAh">--</b><span>mAh</span></div>
+    <div class="card"><i>循环</i><b id="cycles">--</b><span>次</span></div>
+    <div class="card"><i>温控档位</i><b id="thermal">--</b><span></span></div>
+  </div>
+
+  <div class="panel">
+    <div class="row"><span>充电上限 / 回落</span><b><span id="limit">--</span>% / <span id="resume">--</span>%</b></div>
+    <div class="row"><span>控制方法</span><b id="method">--</b></div>
+    <div class="row dim"><span>节点</span><code id="mnode">--</code></div>
+    <div class="row"><span>累计充入</span><b id="totalMah">--</b></div>
+    <div class="row"><span>充电次数</span><b id="sessions">--</b></div>
+    <div class="row dim"><span>更新</span><b id="time">--</b></div>
+  </div>
+
+  <div class="panel">
+    <div class="row"><span>停充方法探测</span><button class="mini" id="probe">重新探测</button></div>
+    <div id="detect" class="detect dim">还没有探测结果</div>
+  </div>
+</section>
+
+<section id="history" class="page">
+  <div class="chartwrap"><div class="charts" id="charts">暂无数据</div></div>
+  <h3>充电会话</h3>
+  <div class="panel" id="sessList"><span class="dim">暂无记录</span></div>
+</section>
+
+<section id="settings" class="page">
+  <div class="panel">
+    <div class="row"><span>停充阈值 (%)</span><input type="number" id="inLimit" min="40" max="100" step="1"></div>
+    <div class="row"><span>回落阈值 (%)</span><input type="number" id="inResume" min="30" max="99" step="1"></div>
+    <div class="row"><span>温控档位</span><input type="number" id="inThermal" min="-1" max="10" step="1"></div>
+    <div class="row"><span>充电控制</span><label class="sw"><input type="checkbox" id="inEnabled"><span></span></label></div>
+    <div class="row"><span>采样间隔 (秒)</span><input type="number" id="inSample" min="10" max="600" step="5"></div>
+  </div>
+  <button class="primary" id="save">保存</button>
+  <p class="hint" id="saveHint"></p>
+  <p class="hint dim">温控档位：-1 跟随系统；0 最激进（不额外限制）；数值越大越保守。调 0 会明显发热。</p>
+</section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

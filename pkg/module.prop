@@ -1,0 +1,6 @@
+id=BatGuard
+name=BatGuard 电池守护
+version=v0.2.0
+versionCode=200
+author=DSH
+description=充电控制 + 电池健康统计：到阈值停充、容量/循环/温度实时看板
